@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+out/
+.env
+.env.local
+.env.*.local
+*.log
+coverage/
+.turbo/
+prisma/*.db
+.DS_Store
+*.tsbuildinfo

@@ -1,0 +1,1 @@
+{"compilerOptions":{"declaration":true,"module":"ESNext","moduleResolution":"Bundler","noEmit":false,"outDir":"dist","paths":{"@chapters/domain":["../domain/dist/index.d.ts"]},"rootDir":"../..","sourceMap":false},"exclude":["src/**/*.test.ts"],"extends":"./tsconfig.json","include":["src"]}

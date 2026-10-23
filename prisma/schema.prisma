@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  DONOR
+  ORG_ADMIN
+  ORG_MEMBER
+  ADMIN
+}
+
+enum Condition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum AgeSuitability {
+  ALL_AGES
+  CHILDREN
+  TEEN
+  YOUNG_ADULT
+  ADULT
+}
+
+enum DonationStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum OutboxStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  role          Role
+  profile       Profile?
+  organization  Organization?  @relation("OrgMembers", fields: [organizationId], references: [id])
+  organizationId String?
+  listings      Listing[]
+  donations     Donation[]     @relation("DonorDonations")
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Profile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String
+  bio         String?
+  avatarUrl   String?
+  city        String?
+  country     String?
+}
+
+model Organization {
+  id               String            @id @default(cuid())
+  name             String
+  description      String?
+  type             String // SCHOOL | LIBRARY | COMMUNITY | OTHER
+  city             String?
+  country          String?
+  verified         Boolean           @default(false)
+  members          User[]            @relation("OrgMembers")
+  donationRequests DonationRequest[]
+  donations        Donation[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Listing {
+  id                String            @id @default(cuid())
+  donorId           String
+  donor             User              @relation(fields: [donorId], references: [id])
+  title             String
+  description       String?
+  genre             String
+  language          String            @default("English")
+  condition         Condition
+  ageSuitability    AgeSuitability    @default(ALL_AGES)
+  quantity          Int
+  availableQuantity Int
+  isAvailable       Boolean           @default(true)
+  donationRequests  DonationRequest[]
+  donations         Donation[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([genre])
+  @@index([language])
+  @@index([isAvailable])
+}
+
+model DonationRequest {
+  id             String         @id @default(cuid())
+  listingId      String
+  listing        Listing        @relation(fields: [listingId], references: [id])
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  requestedById  String
+  quantity       Int
+  message        String?
+  status         DonationStatus @default(PENDING_APPROVAL)
+  donation       Donation?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Donation {
+  id                String           @id @default(cuid())
+  listingId         String
+  listing           Listing          @relation(fields: [listingId], references: [id])
+  donorId           String
+  donor             User             @relation("DonorDonations", fields: [donorId], references: [id])
+  organizationId    String
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  requestId         String?          @unique
+  request           DonationRequest? @relation(fields: [requestId], references: [id])
+  status            DonationStatus   @default(DRAFT)
+  quantity          Int
+  idempotencyKey    String?          @unique
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([status])
+  @@index([donorId])
+  @@index([organizationId])
+}
+
+model OutboxEvent {
+  id          String       @id @default(cuid())
+  type        String
+  aggregateId String
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  createdAt   DateTime     @default(now())
+  processedAt DateTime?
+
+  @@index([status, createdAt])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  status    NotificationStatus @default(PENDING)
+  attempts  Int                @default(0)
+  createdAt DateTime           @default(now())
+}
