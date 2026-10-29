@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY packages/domain/package.json packages/domain/
@@ -10,7 +10,7 @@ COPY prisma prisma
 RUN npm run build -w @chapters/domain || true
 WORKDIR /app/apps/api
 RUN npx tsc -p tsconfig.json || true
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=build /app /app
 EXPOSE 4000
